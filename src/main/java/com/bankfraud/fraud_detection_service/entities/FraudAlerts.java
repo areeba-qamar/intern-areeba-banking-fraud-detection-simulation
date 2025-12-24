@@ -37,6 +37,5 @@ public class FraudAlerts {
     @Column(name = "acknowledged")
     private Boolean acknowledged = false;
 
-    // Getters, Setters, toString
 }
 

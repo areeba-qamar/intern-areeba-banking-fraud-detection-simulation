@@ -45,7 +45,4 @@ public class Transactions {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Getters, Setters, toString
-    // Optional: add logging in setters if you want
-
 }

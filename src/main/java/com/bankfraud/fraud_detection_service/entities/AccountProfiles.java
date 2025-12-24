@@ -35,8 +35,4 @@ public class AccountProfiles {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-
-
-
-    // Getters, Setters, toString
 }

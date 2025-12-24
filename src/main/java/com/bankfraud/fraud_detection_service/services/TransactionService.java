@@ -15,14 +15,14 @@ import java.time.LocalDateTime;
 public class TransactionService {
 
     private final TransactionsRepository txRepo;
-    private final FraudDetectionService fraudService;
+    //private final FraudEvaluationService fraudService;
 
-    public TransactionService(TransactionsRepository txRepo, FraudDetectionService fraudService) {
+    public TransactionService(TransactionsRepository txRepo, FraudEvaluationService fraudService) {
         this.txRepo = txRepo;
-        this.fraudService = fraudService;
+       // this.fraudService = fraudService;
     }
 
-    public void processTransaction(TransactionRequestDTO dto) {
+    public Transactions saveTransaction(TransactionRequestDTO dto) {
         Transactions tx = new Transactions();
         tx.setTransactionId(dto.getTransactionId());
         tx.setAccountId(dto.getAccountId());
@@ -31,8 +31,7 @@ public class TransactionService {
         tx.setCurrency(dto.getCurrency());
         tx.setTimestamp(LocalDateTime.parse(dto.getTimestamp()));
 
-        txRepo.save(tx);
-        fraudService.evaluate(tx);
+        return txRepo.save(tx);
     }
 
     /**

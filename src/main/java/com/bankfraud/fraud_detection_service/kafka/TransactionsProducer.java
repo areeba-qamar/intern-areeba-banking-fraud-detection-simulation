@@ -1,10 +1,8 @@
 package com.bankfraud.fraud_detection_service.kafka;
 
 import com.bankfraud.fraud_detection_service.dtos.TransactionRequestDTO;
-import com.bankfraud.fraud_detection_service.entities.Transactions;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
