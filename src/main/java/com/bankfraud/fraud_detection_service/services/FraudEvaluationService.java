@@ -6,11 +6,12 @@ import com.bankfraud.fraud_detection_service.entities.FraudAlerts;
 import com.bankfraud.fraud_detection_service.entities.Transactions;
 import com.bankfraud.fraud_detection_service.repositories.AccountProfilesRepository;
 import com.bankfraud.fraud_detection_service.repositories.FraudAlertsRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -24,20 +25,27 @@ public class FraudEvaluationService {
 
     private final AccountProfilesRepository profileRepo;
     private final FraudAlertsRepository alertRepo;
-    private final KafkaTemplate<String, FraudAlerts> kafkaTemplate;
+    private KafkaTemplate<String, String> stringKafkaTemplate;
+    private final ObjectMapper objectMapper;
 
-    // Pure business logic (no Spring dependencies)
+
+    //Pure business logic
+
     private final FraudRuleEngine ruleEngine = new FraudRuleEngine();
     private final FraudScoringService scoringService = new FraudScoringService();
 
     private static final String FRAUD_ALERTS_TOPIC = "fraud-alerts";
 
+
     public FraudEvaluationService(AccountProfilesRepository profileRepo,
                                   FraudAlertsRepository alertRepo,
-                                  KafkaTemplate<String, FraudAlerts> kafkaTemplate) {
+                                  @Qualifier("stringKafkaTemplate")
+                                  KafkaTemplate<String, String> stringkafkaTemplate,
+                                  ObjectMapper objectMapper) {
         this.profileRepo = profileRepo;
         this.alertRepo = alertRepo;
-        this.kafkaTemplate = kafkaTemplate;
+        this.stringKafkaTemplate = stringKafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -123,7 +131,7 @@ public class FraudEvaluationService {
             details.put("location", tx.getLocation());
             details.put("timestamp", tx.getTimestamp());
 
-            alert.setDetails(details);   // 🔥 THIS WAS MISSING
+            alert.setDetails(details);
 
 
 
@@ -131,7 +139,10 @@ public class FraudEvaluationService {
             log.info("Fraud alert persisted for transaction {}", tx.getTransactionId());
 
             try {
-                kafkaTemplate.send(FRAUD_ALERTS_TOPIC, alert);
+
+                String alertJson = objectMapper.writeValueAsString(alert);
+                stringKafkaTemplate.send(FRAUD_ALERTS_TOPIC, alertJson);
+
                 log.info("Fraud alert published to Kafka topic {}", FRAUD_ALERTS_TOPIC);
             } catch (Exception e) {
                 log.error(
