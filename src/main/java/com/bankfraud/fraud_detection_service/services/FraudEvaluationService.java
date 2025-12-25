@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class FraudEvaluationService {
@@ -58,6 +60,16 @@ public class FraudEvaluationService {
         // 2️⃣ Static / placeholder flags
         boolean geoMismatch = false;
 
+        // 🔍 DEBUG CONTEXT — VERY IMPORTANT
+        log.info(
+                "Fraud context | txId={} accountId={} recentTxCount={} rapidTransfers={} geoMismatch={}",
+                tx.getTransactionId(),
+                tx.getAccountId(),
+                recentCount,
+                rapidTransfers,
+                geoMismatch
+        );
+
         // 3️⃣ Evaluate fraud rules
         FraudDecision decision = ruleEngine.evaluate(
                 tx,
@@ -70,6 +82,12 @@ public class FraudEvaluationService {
         // 4️⃣ Calculate fraud score
         decision.setScore(scoringService.calculateScore(decision));
 
+        if (decision.getScore().compareTo(BigDecimal.valueOf(40)) >= 0) {
+            decision.setFraudulent(true);
+        } else {
+            decision.setFraudulent(false);
+        }
+
         log.debug(
                 "Transaction {} evaluated | Rules: {} | Score: {}",
                 tx.getTransactionId(),
@@ -78,7 +96,8 @@ public class FraudEvaluationService {
         );
 
         // 5️⃣ Persist & publish alert if fraud detected
-        if (decision.hasAlerts() && decision.getScore().compareTo(BigDecimal.valueOf(50)) >= 0) {
+        if (decision.isFraudulent()) {
+
 
             log.warn(
                     "Fraud detected | Account {} | Tx {} | Score {}",
@@ -89,11 +108,24 @@ public class FraudEvaluationService {
 
             FraudAlerts alert = new FraudAlerts();
             alert.setAccountId(tx.getAccountId());
-            alert.setAlertType(decision.getTriggeredRules().toString());
+            alert.setAlertType("FRAUD");
             alert.setAlertScore(decision.getScore());
             alert.setRelatedTxnId(tx.getTransactionId());
             alert.setDetectedAt(LocalDateTime.now());
             alert.setAcknowledged(false);
+
+            /* ✅ IMPORTANT PART (JSONB DETAILS) */
+            Map<String, Object> details = new HashMap<>();
+            details.put("triggeredRules", decision.getTriggeredRules());
+            details.put("score", decision.getScore());
+            details.put("transactionId", tx.getTransactionId());
+            details.put("amount", tx.getAmount());
+            details.put("location", tx.getLocation());
+            details.put("timestamp", tx.getTimestamp());
+
+            alert.setDetails(details);   // 🔥 THIS WAS MISSING
+
+
 
             alertRepo.save(alert);
             log.info("Fraud alert persisted for transaction {}", tx.getTransactionId());

@@ -15,11 +15,10 @@ import java.time.LocalDateTime;
 public class TransactionService {
 
     private final TransactionsRepository txRepo;
-    //private final FraudEvaluationService fraudService;
 
     public TransactionService(TransactionsRepository txRepo, FraudEvaluationService fraudService) {
         this.txRepo = txRepo;
-       // this.fraudService = fraudService;
+
     }
 
     public Transactions saveTransaction(TransactionRequestDTO dto) {
@@ -29,14 +28,19 @@ public class TransactionService {
         tx.setTxnType(dto.getTxnType());
         tx.setAmount(dto.getAmount());
         tx.setCurrency(dto.getCurrency());
+        tx.setLocation(dto.getLocation());
+        tx.setMerchant(dto.getMerchant());
         tx.setTimestamp(LocalDateTime.parse(dto.getTimestamp()));
 
         return txRepo.save(tx);
     }
 
+
+    //Velocity check:
+    //Count transactions in last N minutes.
+
     /**
-     * Velocity check:
-     * Count transactions in last N minutes.
+     * Velocity window
      */
     public int countRecentTransactions(String accountId, int minutes) {
         LocalDateTime since = LocalDateTime.now().minusMinutes(minutes);
@@ -44,11 +48,17 @@ public class TransactionService {
     }
 
     /**
-     * Placeholder for rapid transfer logic.
+     * Rapid transfers window
      */
     public boolean hasRapidTransfers(String accountId) {
-        // extend later
-        return false;
+        LocalDateTime since = LocalDateTime.now().minusMinutes(5);
+        int count = txRepo.countByAccountIdAndTimestampAfter(accountId, since);
+        return count >= 3;
     }
+
+//    public int hasRapidTransfers(String accountId, int minutes) {
+//        LocalDateTime since = LocalDateTime.now().minusMinutes(minutes);
+//        return txRepo.countByAccountIdAndTimestampAfter(accountId, since);
+//    }
 }
 

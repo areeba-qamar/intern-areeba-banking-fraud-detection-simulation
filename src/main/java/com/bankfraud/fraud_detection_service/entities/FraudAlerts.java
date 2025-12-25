@@ -3,9 +3,12 @@ package com.bankfraud.fraud_detection_service.entities;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Entity
 @Data
@@ -29,7 +32,8 @@ public class FraudAlerts {
     private String relatedTxnId;
 
     @Column(name = "details", columnDefinition = "jsonb")
-    private String details; // store JSON as String
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> details;
 
     @Column(name = "detected_at")
     private LocalDateTime detectedAt = LocalDateTime.now();

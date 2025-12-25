@@ -32,11 +32,11 @@ public class FraudScoringService {
         for (FraudRuleType rule : decision.getTriggeredRules()) {
             // concise switch expression syntax
             switch (rule) {
-                case UNUSUAL_AMOUNT -> score = score.add(BigDecimal.valueOf(40));
-                case VELOCITY -> score = score.add(BigDecimal.valueOf(20));
-                case GEO_MISMATCH -> score = score.add(BigDecimal.valueOf(30));
-                case NIGHT_TX -> score = score.add(BigDecimal.valueOf(10));
-                case RAPID_TRANSFER -> score = score.add(BigDecimal.valueOf(25));
+                case UNUSUAL_AMOUNT -> score = score.add(BigDecimal.valueOf(50));
+                case VELOCITY -> score = score.add(BigDecimal.valueOf(40));
+                case GEO_MISMATCH -> score = score.add(BigDecimal.valueOf(45));
+                case NIGHT_TX -> score = score.add(BigDecimal.valueOf(40));
+                case RAPID_TRANSFER -> score = score.add(BigDecimal.valueOf(40));
             }
         }
         return score;

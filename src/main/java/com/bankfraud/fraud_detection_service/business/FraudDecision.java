@@ -40,6 +40,7 @@ public class FraudDecision {
     }
 
     public boolean hasAlerts() {
-        return !triggeredRules.isEmpty();
+        return fraudulent;
     }
+
 }
