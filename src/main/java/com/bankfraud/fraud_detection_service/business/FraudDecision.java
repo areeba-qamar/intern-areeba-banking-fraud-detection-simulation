@@ -4,7 +4,9 @@ import lombok.Data;
 
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -27,6 +29,11 @@ public class FraudDecision {
      * All triggered fraud rules.
      */
     private Set<FraudRuleType> triggeredRules = new HashSet<>();
+
+    public List<FraudRuleType> getTriggeredRules() {
+        return new ArrayList<>(triggeredRules);
+    }
+
 
     /**
      * Composite fraud score (0–100).

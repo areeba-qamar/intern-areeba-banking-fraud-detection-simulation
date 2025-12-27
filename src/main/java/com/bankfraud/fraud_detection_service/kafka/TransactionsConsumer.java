@@ -1,5 +1,6 @@
 package com.bankfraud.fraud_detection_service.kafka;
 
+import com.bankfraud.fraud_detection_service.controllers.StreamController;
 import com.bankfraud.fraud_detection_service.dtos.TransactionRequestDTO;
 import com.bankfraud.fraud_detection_service.facade.FraudDetectionFacade;
 import com.bankfraud.fraud_detection_service.services.TransactionService;
@@ -9,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 
 @Component
@@ -17,14 +19,18 @@ public class TransactionsConsumer {
     private static final Logger log = LoggerFactory.getLogger(TransactionsConsumer.class);
 
     private final ObjectMapper objectMapper;             // Converts JSON to DTO
-
     private final FraudDetectionFacade facade;
+    private final StreamController streamController; // 🔥 SSE push ke liye
+
 
     // Constructor injection
     public TransactionsConsumer(FraudDetectionFacade facade,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                StreamController streamController) { // 🔥 inject{
         this.facade = facade;
         this.objectMapper = objectMapper;
+        this.streamController = streamController;
+
     }
 
     /**
@@ -46,6 +52,15 @@ public class TransactionsConsumer {
             // - Persisting transaction to DB
             // - Fraud evaluation
             facade.process(dto);
+
+
+            // 🔥 3️⃣ Push live transaction to frontend via SSE
+            try {
+                streamController.pushTransaction(dto);
+
+            } catch (Exception ex) {
+                log.warn("Failed to push transaction SSE", ex);
+            }
 
             System.out.println(">>> Transaction processed <<<"); // stdout
 

@@ -1,6 +1,8 @@
 package com.bankfraud.fraud_detection_service.services;
 
 import com.bankfraud.fraud_detection_service.business.*;
+import com.bankfraud.fraud_detection_service.controllers.StreamController;
+import com.bankfraud.fraud_detection_service.dtos.FraudAlertDTO;
 import com.bankfraud.fraud_detection_service.entities.AccountProfiles;
 import com.bankfraud.fraud_detection_service.entities.FraudAlerts;
 import com.bankfraud.fraud_detection_service.entities.Transactions;
@@ -12,10 +14,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class FraudEvaluationService {
@@ -27,6 +32,7 @@ public class FraudEvaluationService {
     private final FraudAlertsRepository alertRepo;
     private KafkaTemplate<String, String> stringKafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final StreamController streamController; // 🔥 SSE alerts
 
 
     //Pure business logic
@@ -40,12 +46,16 @@ public class FraudEvaluationService {
     public FraudEvaluationService(AccountProfilesRepository profileRepo,
                                   FraudAlertsRepository alertRepo,
                                   @Qualifier("stringKafkaTemplate")
-                                  KafkaTemplate<String, String> stringkafkaTemplate,
-                                  ObjectMapper objectMapper) {
+                                  KafkaTemplate<String, String> stringKafkaTemplate,
+                                  ObjectMapper objectMapper,
+                                  StreamController streamController) {
+
         this.profileRepo = profileRepo;
         this.alertRepo = alertRepo;
         this.stringKafkaTemplate = stringKafkaTemplate;
         this.objectMapper = objectMapper;
+        this.streamController = streamController;
+
     }
 
     /**
@@ -66,7 +76,7 @@ public class FraudEvaluationService {
                 profileRepo.findById(tx.getAccountId()).orElse(null);
 
         // 2️⃣ Static / placeholder flags
-        boolean geoMismatch = false;
+        boolean geoMismatch = true;
 
         // 🔍 DEBUG CONTEXT — VERY IMPORTANT
         log.info(
@@ -116,8 +126,14 @@ public class FraudEvaluationService {
 
             FraudAlerts alert = new FraudAlerts();
             alert.setAccountId(tx.getAccountId());
-            alert.setAlertType("FRAUD");
-            alert.setAlertScore(decision.getScore());
+            alert.setAlertType(String.join(
+                    ",",
+                    decision.getTriggeredRules()
+                            .stream()
+                            .map(Enum::name)
+                            .collect(Collectors.joining(","))
+            ));
+            alert.setAlertScore(decision.getScore()); // 💥 Add this line
             alert.setRelatedTxnId(tx.getTransactionId());
             alert.setDetectedAt(LocalDateTime.now());
             alert.setAcknowledged(false);
@@ -134,9 +150,33 @@ public class FraudEvaluationService {
             alert.setDetails(details);
 
 
+           try {
+               alertRepo.save(alert);
+               log.info("Fraud alert persisted for transaction {}", tx.getTransactionId());
+           }catch (Exception e) {
+               log.error("Failed to persist fraud alert for tx {}", tx.getTransactionId(), e);
+           }
 
-            alertRepo.save(alert);
-            log.info("Fraud alert persisted for transaction {}", tx.getTransactionId());
+
+            // 🔥 Push fraud alert to frontend via SSE
+
+            FraudAlertDTO dto = new FraudAlertDTO(
+                    alert.getId(),
+                    alert.getAccountId(),
+                    alert.getAlertType(),
+                    alert.getAlertScore(),
+                    alert.getRelatedTxnId(),
+                    alert.getDetails(),
+                    alert.getDetectedAt(),
+                    alert.getAcknowledged()
+            );
+
+            try {
+                streamController.pushAlert(dto);
+            } catch (Exception ex) {
+                log.warn("Failed to push fraud alert SSE", ex);
+            }
+
 
             try {
 
