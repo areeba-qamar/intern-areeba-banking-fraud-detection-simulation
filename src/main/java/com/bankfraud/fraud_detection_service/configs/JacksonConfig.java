@@ -14,9 +14,9 @@ import org.springframework.kafka.core.ProducerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Central configuration for JSON serialization/deserialization.
- */
+
+ //Central configuration for JSON serialization/deserialization.
+
 @Configuration
 public class JacksonConfig {
 
@@ -47,6 +47,5 @@ public class JacksonConfig {
     public KafkaTemplate<String, String> stringKafkaTemplate() {
         return new KafkaTemplate<>(stringProducerFactory());
     }
-
 
 }

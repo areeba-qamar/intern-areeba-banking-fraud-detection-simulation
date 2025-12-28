@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Sends transactions to Kafka for processing by TransactionsConsumer.
- */
+
+ //Sends transactions to Kafka for processing by TransactionsConsumer.
+
 @Component
 public class TransactionsProducer {
 

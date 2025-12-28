@@ -8,9 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-/**
- * Handles DB queries needed for fraud rules.
- */
+
+ // Handles DB queries needed for fraud rules.
+
 @Service
 public class TransactionService {
 
@@ -39,26 +39,19 @@ public class TransactionService {
     //Velocity check:
     //Count transactions in last N minutes.
 
-    /**
-     * Velocity window
-     */
     public int countRecentTransactions(String accountId, int minutes) {
         LocalDateTime since = LocalDateTime.now().minusMinutes(minutes);
         return txRepo.countByAccountIdAndTimestampAfter(accountId, since);
     }
 
-    /**
-     * Rapid transfers window
-     */
+
+     //Rapid transfers window
+
     public boolean hasRapidTransfers(String accountId) {
         LocalDateTime since = LocalDateTime.now().minusMinutes(5);
         int count = txRepo.countByAccountIdAndTimestampAfter(accountId, since);
         return count >= 3;
     }
 
-//    public int hasRapidTransfers(String accountId, int minutes) {
-//        LocalDateTime since = LocalDateTime.now().minusMinutes(minutes);
-//        return txRepo.countByAccountIdAndTimestampAfter(accountId, since);
-//    }
 }
 

@@ -17,44 +17,46 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class TransactionsConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionsConsumer.class);
-
-    private final ObjectMapper objectMapper;             // Converts JSON to DTO
+    private final ObjectMapper objectMapper;
     private final FraudDetectionFacade facade;
-    private final StreamController streamController; // 🔥 SSE push ke liye
+    private final StreamController streamController; // For SSE push
 
 
     // Constructor injection
     public TransactionsConsumer(FraudDetectionFacade facade,
                                 ObjectMapper objectMapper,
-                                StreamController streamController) { // 🔥 inject{
+                                StreamController streamController) {
         this.facade = facade;
         this.objectMapper = objectMapper;
         this.streamController = streamController;
 
     }
 
-    /**
-     * Kafka listener method: triggered when a message arrives on the 'transactions' topic.
-     *
-     * @param record Kafka consumer record containing key, value, partition, offset
-     */
+
+     // Kafka listener method: triggered when a message arrives on the 'transactions' topic.
+     //@param record Kafka consumer record containing key, value, partition, offset
 
     @KafkaListener(topics = "transactions", groupId = "fraud-detection-group")
     public void consume(ConsumerRecord<String, String> record) {
-        System.out.println(">>> Kafka listener HIT <<<");   // simple stdout
+        System.out.println(">>> Kafka listener HIT <<<");
+
         log.info("CONSUMER HIT !! Message received: {}", record.value());
         try {
-            // 1️⃣ Convert incoming JSON string to TransactionRequestDTO
+
+            // Convert incoming JSON string to TransactionRequestDTO
+
             TransactionRequestDTO dto = objectMapper.readValue(record.value(), TransactionRequestDTO.class);
 
-            // 2️⃣ Delegate business logic to service layer:
+            //  Delegate business logic to service layer:
             // - DTO -> Entity mapping
             // - Persisting transaction to DB
             // - Fraud evaluation
+
             facade.process(dto);
 
 
-            // 🔥 3️⃣ Push live transaction to frontend via SSE
+            // Push live transaction to frontend via SSE
+
             try {
                 streamController.pushTransaction(dto);
 
@@ -62,15 +64,15 @@ public class TransactionsConsumer {
                 log.warn("Failed to push transaction SSE", ex);
             }
 
-            System.out.println(">>> Transaction processed <<<"); // stdout
+            System.out.println(">>> Transaction processed <<<");
 
-            // 3️⃣ Log success
+            // Log success
+
             log.info("Transaction {} processed successfully.", dto.getTransactionId());
 
         } catch (Exception e) {
             // Log any errors in deserialization or processing
             log.error("Failed to process transaction message: {}", record.value(), e);
-            // Optional: send this message to a Dead Letter Queue (DLQ) or error tracking
         }
     }
 }

@@ -1,9 +1,8 @@
 package com.bankfraud.fraud_detection_service.business;
 
-/**
- * Enum representing all supported fraud rules.
- * Keeps rule identifiers consistent across system.
- */
+
+ //Enum representing all supported fraud rules.
+
 public enum FraudRuleType {
 
     UNUSUAL_AMOUNT,

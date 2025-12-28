@@ -11,9 +11,9 @@ public class TransactionRequestDTO {
     private String transactionId;
     private String accountId;
     private String txnType;
-    private BigDecimal amount; // temporary double to avoid deserialization errors
+    private BigDecimal amount;
     private String currency;
     private String location;
     private String merchant;
-    private String timestamp; // parse later to LocalDateTime
+    private String timestamp;
 }

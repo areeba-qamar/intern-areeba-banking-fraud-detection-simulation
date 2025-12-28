@@ -4,7 +4,6 @@ import com.bankfraud.fraud_detection_service.dtos.AccountProfileRequestDTO;
 import com.bankfraud.fraud_detection_service.entities.AccountProfiles;
 import com.bankfraud.fraud_detection_service.repositories.AccountProfilesRepository;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 
 
