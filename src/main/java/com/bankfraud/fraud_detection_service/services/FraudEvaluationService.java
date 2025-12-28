@@ -71,7 +71,15 @@ public class FraudEvaluationService {
 
         // Static / placeholder flags
 
-        boolean geoMismatch = true;
+        boolean geoMismatch = false;
+
+        if (profile != null
+                && tx.getLocation() != null
+                && profile.getHomeCountry() != null) {
+
+            geoMismatch = !tx.getLocation()
+                    .equalsIgnoreCase(profile.getHomeCountry());
+        }
 
         // DEBUG CONTEXT — VERY IMPORTANT
 

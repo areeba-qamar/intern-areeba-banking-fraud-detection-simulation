@@ -44,7 +44,7 @@ public class FraudRuleEngine {
 
         /* ---------------- Rule 2: Velocity ---------------- */
 
-        if (recentTxCount >= 5) {
+        if (recentTxCount >= 3) {
             decision.addRule(FraudRuleType.VELOCITY);
         }
 
