@@ -29,10 +29,10 @@ public class FraudEvaluationService {
 
     private final AccountProfilesRepository profileRepo;
     private final FraudAlertsRepository alertRepo;
-    private KafkaTemplate<String, String> stringKafkaTemplate;
+    private final KafkaTemplate<String, String> stringKafkaTemplate;
     private final ObjectMapper objectMapper;
     private final StreamController streamController; // SSE alerts
-
+    private final TransactionService transactionService;
 
     //Pure business logic
 
@@ -45,31 +45,56 @@ public class FraudEvaluationService {
                                   @Qualifier("stringKafkaTemplate")
                                   KafkaTemplate<String, String> stringKafkaTemplate,
                                   ObjectMapper objectMapper,
-                                  StreamController streamController) {
+                                  StreamController streamController,
+                                  TransactionService transactionService ) {
+
 
         this.profileRepo = profileRepo;
         this.alertRepo = alertRepo;
         this.stringKafkaTemplate = stringKafkaTemplate;
         this.objectMapper = objectMapper;
         this.streamController = streamController;
-
+        this.transactionService = transactionService;
     }
 
 
-     // Evaluate transaction for fraud.
+     // Main Fraud Evaluation method
 
-    public void evaluate(Transactions tx,
-                         int recentCount,
-                         boolean rapidTransfers) {
+    public void evaluate(Transactions tx) {
 
-        log.info("Starting fraud evaluation for transaction {}", tx.getTransactionId());
+        log.info(
+                "Starting fraud evaluation | txId={} accountId={} amount={}",
+                tx.getTransactionId(),
+                tx.getAccountId(),
+                tx.getAmount()
+        );
+
+        // Velocity: last 2 minutes
+        LocalDateTime velocitySince =
+                tx.getTimestamp().minusMinutes(2);
+
+        // Rapid transfers: last 5 minutes
+        LocalDateTime rapidSince =
+                tx.getTimestamp().minusMinutes(5);
+
+        int recentCount =
+                transactionService.countTransactionsSince(
+                        tx.getAccountId(),
+                        velocitySince
+                );
+
+        boolean rapidTransfers =
+                transactionService.countTransactionsSince(
+                        tx.getAccountId(),
+                        rapidSince
+                ) >= 10;
 
         // Fetch account profile
 
         AccountProfiles profile =
                 profileRepo.findById(tx.getAccountId()).orElse(null);
 
-        // Static / placeholder flags
+        // Geo Mismatch check
 
         boolean geoMismatch = false;
 
@@ -81,7 +106,7 @@ public class FraudEvaluationService {
                     .equalsIgnoreCase(profile.getHomeCountry());
         }
 
-        // DEBUG CONTEXT — VERY IMPORTANT
+        // DEBUG CONTEXT LOG — VERY IMPORTANT
 
         log.info(
                 "Fraud context | txId={} accountId={} recentTxCount={} rapidTransfers={} geoMismatch={}",
@@ -92,7 +117,7 @@ public class FraudEvaluationService {
                 geoMismatch
         );
 
-        // Evaluate fraud rules
+        // Rule Evaluation
 
         FraudDecision decision = ruleEngine.evaluate(
                 tx,
@@ -102,7 +127,7 @@ public class FraudEvaluationService {
                 rapidTransfers
         );
 
-        // Calculate fraud score
+        // Scoring : Calculate fraud Score
 
         decision.setScore(scoringService.calculateScore(decision));
 
@@ -121,7 +146,9 @@ public class FraudEvaluationService {
 
         // Persist & publish alert if fraud detected
 
-        if (decision.isFraudulent()) {
+        if (!decision.isFraudulent()) {
+            return; // skip non-fraudulent transactions
+        }
 
             log.warn(
                     "Fraud detected | Account {} | Tx {} | Score {}",
@@ -129,6 +156,9 @@ public class FraudEvaluationService {
                     tx.getTransactionId(),
                     decision.getScore()
             );
+
+
+            // Build Alert Entity
 
             FraudAlerts alert = new FraudAlerts();
             alert.setAccountId(tx.getAccountId());
@@ -156,17 +186,20 @@ public class FraudEvaluationService {
 
             alert.setDetails(details);
 
+         // Save Alert in Alert Table
 
            try {
                alertRepo.save(alert);
                log.info("Fraud alert persisted for transaction {}", tx.getTransactionId());
            }catch (Exception e) {
                log.error("Failed to persist fraud alert for tx {}", tx.getTransactionId(), e);
+               return;
            }
 
 
             // Push fraud alert to frontend via SSE
 
+        try {
             FraudAlertDTO dto = new FraudAlertDTO(
                     alert.getId(),
                     alert.getAccountId(),
@@ -177,13 +210,12 @@ public class FraudEvaluationService {
                     alert.getDetectedAt(),
                     alert.getAcknowledged()
             );
-
-            try {
-                streamController.pushAlert(dto);
-            } catch (Exception ex) {
+            streamController.pushAlert(dto);
+        } catch (Exception ex) {
                 log.warn("Failed to push fraud alert SSE", ex);
-            }
+        }
 
+        // Publish to Kafka
 
             try {
                 String alertJson = objectMapper.writeValueAsString(alert);
@@ -199,4 +231,3 @@ public class FraudEvaluationService {
             }
         }
     }
-}

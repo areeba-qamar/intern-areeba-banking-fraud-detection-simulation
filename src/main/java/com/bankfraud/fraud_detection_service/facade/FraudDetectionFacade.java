@@ -27,17 +27,9 @@ public class FraudDetectionFacade {
         Transactions tx = transactionService.saveTransaction(dto);
 
 
-        // Gather context
-
-        int recentCount =
-                transactionService.countRecentTransactions(tx.getAccountId(), 2);
-
-        boolean rapidTransfers =
-                transactionService.hasRapidTransfers(tx.getAccountId());
-
         // Evaluate fraud
-        
-        fraudService.evaluate(tx, recentCount, rapidTransfers);
+
+        fraudService.evaluate(tx);
     }
 }
 

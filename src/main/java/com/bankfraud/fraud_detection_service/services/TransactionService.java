@@ -5,7 +5,6 @@ import com.bankfraud.fraud_detection_service.dtos.TransactionRequestDTO;
 import com.bankfraud.fraud_detection_service.entities.Transactions;
 import com.bankfraud.fraud_detection_service.repositories.TransactionsRepository;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 
 
@@ -16,7 +15,7 @@ public class TransactionService {
 
     private final TransactionsRepository txRepo;
 
-    public TransactionService(TransactionsRepository txRepo, FraudEvaluationService fraudService) {
+    public TransactionService(TransactionsRepository txRepo) {
         this.txRepo = txRepo;
 
     }
@@ -34,24 +33,27 @@ public class TransactionService {
 
         return txRepo.save(tx);
     }
+    // Count transactions since a given timestamp (helper for velocity/rapid transfers)
 
-
-    //Velocity check:
-    //Count transactions in last N minutes.
-
-    public int countRecentTransactions(String accountId, int minutes) {
-        LocalDateTime since = LocalDateTime.now().minusMinutes(minutes);
+    public int countTransactionsSince(String accountId, LocalDateTime since) {
         return txRepo.countByAccountIdAndTimestampAfter(accountId, since);
     }
 
-
-     //Rapid transfers window
-
-    public boolean hasRapidTransfers(String accountId) {
-        LocalDateTime since = LocalDateTime.now().minusMinutes(5);
-        int count = txRepo.countByAccountIdAndTimestampAfter(accountId, since);
-        return count >= 3;
-    }
+//    //Velocity check:
+//    //Count transactions in last N minutes.
+//
+//    public int countRecentTransactions(String accountId, int minutes) {
+//        LocalDateTime since =  tx.getTimestamp().minusMinutes(minutes);
+//        return txRepo.countByAccountIdAndTimestampAfter(accountId, since);
+//    }
+//
+//     //Rapid transfers window
+//
+//    public boolean hasRapidTransfers(String accountId) {
+//        LocalDateTime since =  tx.getTimestamp().minusMinutes(minutes);
+//        int count = txRepo.countByAccountIdAndTimestampAfter(accountId, since);
+//        return count >= 3;
+//    }
 
 }
 
