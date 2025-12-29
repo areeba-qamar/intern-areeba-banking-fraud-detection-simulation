@@ -13,7 +13,7 @@ Transactions are streamed, evaluated against fraud rules, scored, persisted, and
 - Fraud scoring mechanism
 - PostgreSQL persistence (transactions + alerts)
 - Real-time fraud alert streaming via SSE
-- React-based dashboard (investigation pane)
+- React-based dashboard 
 - Dockerized infrastructure
 
 ---
@@ -44,13 +44,12 @@ Transactions are streamed, evaluated against fraud rules, scored, persisted, and
 
 ## Project Setup & Run Instructions
 
-### Clone Repository of front end
+### Clone Repository 
 
 
 ### Start Infrastructure & Backend
 
 docker compose up --build
-
 
 This starts:
 
@@ -62,19 +61,16 @@ PostgreSQL
 
 Fraud Detection Service
 
- Run Transaction Simulator / Producer
+ ### Transaction Simulation
 
-Send transactions using:
+Transactions are manually simulated using:
 
-Postman
-
-Kafka console producer
-
+- Postman (REST API calls)
+- Kafka console producer (optional)
 
 ### Start Frontend UI
 
 npm run dev
-
 
 Open UI:
 
@@ -86,14 +82,17 @@ http://localhost:3000
 Rule	Description
 
 UNUSUAL_AMOUNT	Amount > 3× average or > 100,000
-VELOCITY	≥ 5 transactions in short window
+VELOCITY	≥ 3 transactions in short window
 GEO_MISMATCH	Transaction country ≠ home country
 NIGHT_TX	12 AM – 4 AM & amount > 50,000
+RAPID_TRANSFER → ≥ 10 transactions in 5 min window
 
- ### Output
+### Output
 
-Fraud alerts stored in database
+- Fraud alerts are persisted in PostgreSQL
+- Live alerts are streamed to frontend using SSE
+- Each alert includes:
+  - Triggered rules
+  - Fraud score
+  - Transaction metadata
 
-Live alerts pushed to frontend via SSE
-
-Alerts include score, rules, transaction details
